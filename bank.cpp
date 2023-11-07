@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <list>
 #include "account.h"
 
@@ -51,16 +52,38 @@ int main (int argc, char* argv[]) {
         return 1;
     }
 
+    ifstream reg(filename);
+    string line;
     list<Account> registrations;
+
+    while (getline(reg, line)) {
+        stringstream s(line);
+        string ts, id, p, bal;
+        getline(reg, ts, '|');
+        getline(reg, id, '|');
+        getline(reg, p, '|');
+        getline(reg, bal, '|');
+        registrations.push_back(Account(id, uint32_t(stoi(bal)), uint32_t(stoi(p)), uint64_t(stoi(ts))));
+    }
 
     string line;
     while(getline(cin, line)) {
-        stringstream s(line);
-        string start;
-        s >> start;
-        if (start == "login") {
-            string id;
-            s >> id;
+        if (line[0] != '#') {
+            stringstream s(line);
+            string start;
+            s >> start;
+            if (start == "login") {
+                string id, p, ip;
+                s >> id >> p >> ip;
+            } else if (start == "out") {
+                string id, ip;
+                s >> id >> ip;
+            } else if (start == "place") {
+                string ts, ip, send, recip, amount, exec;
+                s >> ts >> ip >> send >> recip >> amount >> exec;
+            } else if (start == "$$$") {
+                break;
+            }
         }
     }
 }
