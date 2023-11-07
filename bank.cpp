@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <getopt.h>
 #include <iostream>
+#include <sstream>
+#include <list>
 #include "account.h"
 
 using namespace std;
@@ -47,5 +49,18 @@ int main (int argc, char* argv[]) {
     if (!file) {
         cout << "registrations not specified\n";
         return 1;
+    }
+
+    list<Account> registrations;
+
+    string line;
+    while(getline(cin, line)) {
+        stringstream s(line);
+        string start;
+        s >> start;
+        if (start == "login") {
+            string id;
+            s >> id;
+        }
     }
 }
