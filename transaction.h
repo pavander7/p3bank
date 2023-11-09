@@ -9,4 +9,8 @@ struct Transaction {
     uint32_t amount;
     string recipient;
     uint64_t timestamp;
+
+    bool operator< (const Transaction &other) const;
 };
+
+ostream& operator<< (ostream& os, const Transaction &t);

@@ -7,23 +7,34 @@
 
 using namespace std;
 
-uint8_t place(uint64_t num, uint8_t p);
-
 class Account {
 public:
     Account(string id_in, uint32_t start_bal, uint32_t pin_in, uint64_t timeReg);
 
-    string login(string id, uint32_t p, size_t ip);
-    string logout(size_t ip);
+    string login(string id, uint32_t p, string ip);
+    string logout(string ip);
 
     void send(uint64_t timestamp, Account* recipient, uint32_t amount);
-    void receive(uint32_t amount);
+    void receive(uint64_t timestamp, Account* sender, uint32_t amount);
+    void fine(uint32_t amount, uint64_t ts);
+    void fine(uint32_t amount, uint64_t ts, Account* recipient);
+
+    string name();
+    bool isOnline();
+    bool loyalty(uint64_t ts);
+    void report();
+
+    bool operator< (const Account &other) const;
 
 private:
     string user_id;
     uint32_t balance;
     uint32_t PIN;
     uint64_t REG_TIMESTAMP;
-    vector<Transaction> record;
-    list<size_t> IP_list;
+    vector<Transaction> record_o;
+    vector<Transaction> record_i;
+    list<string> IP_list;
 };
+
+uint8_t place(uint64_t num, uint8_t p);
+Account* findAccount (vector<Account> &data, string id);
