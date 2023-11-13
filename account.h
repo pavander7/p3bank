@@ -14,8 +14,8 @@ public:
     string login(string id, uint32_t p, string ip);
     string logout(string ip);
 
-    void send(uint64_t timestamp, Account* recipient, uint32_t amount);
-    void receive(uint64_t timestamp, Account* sender, uint32_t amount);
+    void send(uint64_t timestamp, Account* recipient, uint32_t amount, size_t ID);
+    void receive(uint64_t timestamp, Account* sender, uint32_t amount, size_t ID);
     void fine(uint32_t amount, uint64_t ts);
     void fine(uint32_t amount, uint64_t ts, Account* recipient);
 
@@ -36,5 +36,6 @@ private:
     list<string> IP_list;
 };
 
-uint8_t place(uint64_t num, uint8_t p);
+uint8_t placeV(uint64_t num, uint8_t p);
+void tsOut(uint64_t ts);
 Account* findAccount (vector<Account> &data, string id);

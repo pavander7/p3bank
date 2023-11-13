@@ -10,6 +10,85 @@
 
 using namespace std;
 
+bool place (Account* s, Account* r, uint32_t amount, uint64_t ts, size_t ID) {
+    if (s != nullptr && r != nullptr) {
+        if (s->isOnline()) {
+            s->send(ts, r, amount, ID);
+            return true;
+        } else return false;
+    } else return false;
+}
+
+void listOut(vector<Transaction> &record, uint64_t begin, uint64_t end) {
+    uint64_t current = record.front().timestamp;
+    size_t i = 0;
+    while (current < begin && i < record.size()) {
+        current = record[i].timestamp;
+        i++;
+    } size_t count = 0;
+    while (current < end && i < record.size()) {
+        cout << record[i];
+        i++;
+        count++;
+    } 
+    if (count == 1) {
+        cout << "There was " + to_string(count) + " transaction that was placed between time "
+             + to_string(begin) + " to " + to_string(end) + ".\n"; 
+    } else {
+        cout << "There were " + to_string(count) + " transactions that were placed between time "
+             + to_string(begin) + " to " + to_string(end) + ".\n"; 
+    }
+}
+
+void revenue(vector<Transaction> &record, uint64_t begin, uint64_t end, vector<Account> &reg) {
+    uint64_t current = record.front().timestamp;
+    size_t i = 0;
+    while (current < begin && i < record.size()) {
+        current = record[i].timestamp;
+        i++;
+    } uint32_t revenue = 0;
+    while (current < end && i < record.size()) {
+        Account* sender = findAccount(reg, record[i].sender);
+        uint32_t fee = record[i].amount/uint32_t(100);
+        fee = min(fee, uint32_t(450));
+        fee = max(fee, uint32_t(10));
+        if (sender->loyalty(record[i].timestamp)) {
+            fee = (fee * 3) / 4;
+        } revenue += fee;
+        i++;
+    } uint64_t interval = end - begin;
+    cout << "281bank has collected " << to_string(revenue) << " dollars in fees over ";
+    tsOut(interval);
+}
+
+void summarize(vector<Transaction> &record, vector<Account> &reg, uint64_t ts) {
+    uint64_t begin, end;
+    begin = uint64_t(placeV(ts, 0)*uint8_t(10000000000));
+    end = begin + uint64_t(10000000000);
+    cout << "Summary of [" << to_string(begin) << ", " << to_string(end) << "):\n";
+    uint64_t current = record.front().timestamp;
+    size_t i = 0;
+    while (current < begin && i < record.size()) {
+        current = record[i].timestamp;
+        i++;
+    } size_t count = 0;
+    uint32_t revenue = 0;
+    while (current < end && i < record.size()) {
+        cout << record[i];
+        Account* sender = findAccount(reg, record[i].sender);
+        uint32_t fee = record[i].amount/uint32_t(100);
+        fee = min(fee, uint32_t(450));
+        fee = max(fee, uint32_t(10));
+        if (sender->loyalty(record[i].timestamp)) {
+            fee = (fee * 3) / 4;
+        } revenue += fee;
+        i++;
+        count++;
+    } 
+    cout << "There were a total of " << to_string(count) << " transactions, 281Bank has collected "
+         << to_string(revenue) << " dollars in fees.\n";
+}
+
 int main (int argc, char* argv[]) {
     //getoptlong
     //getoptlong time
@@ -68,7 +147,7 @@ int main (int argc, char* argv[]) {
 
     vector<Transaction> record;
 
-    string line;
+    size_t TransNum = 0;
     while(getline(cin, line)) {
         if (line[0] != '#') {
             stringstream s(line);
@@ -92,11 +171,12 @@ int main (int argc, char* argv[]) {
                 if ((stoi(exec) - stoi(ts)) > 3 || (stoi(exec) - stoi(ts)) < 0) {
                     cout << "You cannot have an execution date before the current timestamp.\n";
                 } else {
-                    if(place(sender, recipient, uint32_t(stoi(amount)), uint64_t(stoi(exec)))) {
+                    if(place(sender, recipient, uint32_t(stoi(amount)), uint64_t(stoi(exec)), TransNum)) {
                         if (share == "o") {
                             sender->fine(uint32_t(stoi(amount)), uint64_t(stoi(exec)));
                         } else sender->fine(uint32_t(stoi(amount)), uint64_t(stoi(exec)), recipient);
-                        record.push_back({sender->name(), uint32_t(stoi(amount)), recipient->name(), uint64_t(stoi(exec))});
+                        record.push_back({sender->name(), uint32_t(stoi(amount)), recipient->name(), uint64_t(stoi(exec)), TransNum});
+                        TransNum++;
                     }
                 }
             } else if (start == "$$$") {
@@ -129,89 +209,4 @@ int main (int argc, char* argv[]) {
             summarize(record, registrations, ts);
         }
     }
-}
-
-bool place (Account* s, Account* r, uint32_t amount, uint64_t ts) {
-    if (s != nullptr && r != nullptr) {
-        if (s->isOnline()) {
-            s->send(ts, r, amount);
-            return true;
-        } else return false;
-    } else return false;
-}
-
-void listOut(vector<Transaction> &record, uint64_t begin, uint64_t end) {
-    uint64_t current = record.front().timestamp;
-    size_t i = 0;
-    while (current < begin && i < record.size()) {
-        current = record[i].timestamp;
-        i++;
-    } size_t count = 0;
-    while (current < end && i < record.size()) {
-        cout << record[i];
-        i++;
-        count++;
-    } 
-    if (count == 1) {
-        cout << "There was " + to_string(count) + " transaction that was placed between time "
-             + to_string(begin) + " to " + to_string(end) + ".\n"; 
-    } else {
-        cout << "There were " + to_string(count) + " transactions that were placed between time "
-             + to_string(begin) + " to " + to_string(end) + ".\n"; 
-    }
-}
-
-void revenue(vector<Transaction> &record, uint64_t begin, uint64_t end, vector<Account> &reg) {
-    uint64_t current = record.front().timestamp;
-    size_t i = 0;
-    while (current < begin && i < record.size()) {
-        current = record[i].timestamp;
-        i++;
-    } uint32_t revenue = 0;
-    while (current < end && i < record.size()) {
-        Account* sender = findAccount(reg, record[i].sender);
-        uint32_t fee = record[i].amount/uint32_t(100);
-        fee = min(fee, uint32_t(450));
-        fee = max(fee, uint32_t(10));
-        if (sender->loyalty(record[i].timestamp)) {
-            fee = (fee * 3) / 4;
-        } revenue += fee;
-        i++;
-    } uint64_t interval = end - begin;
-    cout << "281bank has collected " << to_string(revenue) << " dollars in fees over ";
-    if (place(interval, 0) != 0) cout << to_string(place(interval, 0)) << " years ";
-    if (place(interval, 1) != 0) cout << to_string(place(interval, 1)) << " months ";
-    if (place(interval, 2) != 0) cout << to_string(place(interval, 2)) << " days ";
-    if (place(interval, 3) != 0) cout << to_string(place(interval, 3)) << " hours ";
-    if (place(interval, 4) != 0) cout << to_string(place(interval, 4)) << " minutes ";
-    if (place(interval, 5) != 0) cout << to_string(place(interval, 5)) << " seconds";
-    cout << ".\n";
-}
-
-void summarize(vector<Transaction> &record, vector<Account> &reg, uint64_t ts) {
-    uint64_t begin, end;
-    begin = uint64_t(place(ts, 0)*uint8_t(10000000000));
-    end = begin + uint64_t(10000000000);
-    cout << "Summary of [" << to_string(begin) << ", " << to_string(end) << "):\n";
-    uint64_t current = record.front().timestamp;
-    size_t i = 0;
-    while (current < begin && i < record.size()) {
-        current = record[i].timestamp;
-        i++;
-    } size_t count = 0;
-    uint32_t revenue = 0;
-    while (current < end && i < record.size()) {
-        cout << record[i];
-        Account* sender = findAccount(reg, record[i].sender);
-        uint32_t fee = record[i].amount/uint32_t(100);
-        fee = min(fee, uint32_t(450));
-        fee = max(fee, uint32_t(10));
-        if (sender->loyalty(record[i].timestamp)) {
-            fee = (fee * 3) / 4;
-        } revenue += fee;
-        i++;
-        count++;
-    } 
-    cout << "There were a total of " << to_string(count) << " transactions, 281Bank has collected "
-         << to_string(revenue) << " dollars in fees.\n";
 }

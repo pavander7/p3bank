@@ -26,17 +26,18 @@ string Account::logout(string ip) {
         }
     }
     if (!found) return "Failed to log out " + user_id + ".\n";
+    return "Failed to log out " + user_id + ".\n";
 }
 
-void Account::send(uint64_t timestamp, Account* recipient, uint32_t amount) {
-    Transaction temp = {user_id, amount, recipient->user_id, timestamp};
+void Account::send(uint64_t timestamp, Account* recipient, uint32_t amount, size_t ID) {
+    Transaction temp = {user_id, amount, recipient->user_id, timestamp, ID};
     balance -= amount;
     record_o.push_back(temp);
-    recipient->receive(timestamp, this, amount);
+    recipient->receive(timestamp, this, amount, ID);
 }
 
-void Account::receive(uint64_t timestamp, Account* sender, uint32_t amount) {
-    Transaction temp = {sender->user_id, amount, user_id, timestamp};
+void Account::receive(uint64_t timestamp, Account* sender, uint32_t amount, size_t ID) {
+    Transaction temp = {sender->user_id, amount, user_id, timestamp, ID};
     balance += amount;
     record_i.push_back(temp);
 }
@@ -96,7 +97,7 @@ bool Account::loyalty(uint64_t ts) {
     return ((ts - this->REG_TIMESTAMP) >= uint64_t(50000000000));
 }
 
-uint8_t place(uint64_t num, uint8_t p) {
+uint8_t placeV(uint64_t num, uint8_t p) {
     uint8_t val = 0;
     val = (num/uint64_t(10^(10-2*int(p))))%100;
     return val;
@@ -113,4 +114,72 @@ void Account::report() {
     for(size_t g = 0; g < record_o.size(); g++) {
         cout << endl << record_o[g];
     }
+}
+
+void tsOut (uint64_t ts) {
+    uint8_t g = 0;
+    while (placeV(ts, g) == 0 && g <= 5) {
+        g++;
+    }
+    switch (g) {
+        case 0 :
+            cout << to_string(placeV(ts, 0)) << " year";
+            if (placeV(ts, 0) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 1)) << " month";
+            if (placeV(ts, 1) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 2)) << " day";
+            if (placeV(ts, 2) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 3)) << " hour";
+            if (placeV(ts, 3) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 4)) << " minute";
+            if (placeV(ts, 4) == 1) cout << " ";
+            else cout << "s ";
+            break;
+        case 1 :
+            cout << to_string(placeV(ts, 1)) << " month";
+            if (placeV(ts, 1) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 2)) << " day";
+            if (placeV(ts, 2) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 3)) << " hour";
+            if (placeV(ts, 3) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 4)) << " minute";
+            if (placeV(ts, 4) == 1) cout << " ";
+            else cout << "s ";
+            break;
+        case 2 :
+            cout << to_string(placeV(ts, 2)) << " day";
+            if (placeV(ts, 2) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 3)) << " hour";
+            if (placeV(ts, 3) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 4)) << " minute";
+            if (placeV(ts, 4) == 1) cout << " ";
+            else cout << "s ";
+            break;
+        case 3 :
+            cout << to_string(placeV(ts, 3)) << " hour";
+            if (placeV(ts, 3) == 1) cout << " ";
+            else cout << "s ";
+            cout << to_string(placeV(ts, 4)) << " minute";
+            if (placeV(ts, 4) == 1) cout << " ";
+            else cout << "s ";
+            break;
+        case 4 :
+            cout << to_string(placeV(ts, 4)) << " minute";
+            if (placeV(ts, 4) == 1) cout << " ";
+            else cout << "s ";
+            break;
+        default :
+            break;
+    } cout << to_string(placeV(ts, 5)) << " second";
+    if (placeV(ts, 5) == 1) cout << ".\n";
+    else cout << "s.\n";
 }
