@@ -28,7 +28,7 @@ UNIQNAME    = pavander
 IDENTIFIER  = 292F24D17A4455C1B5133EDD8C7CEAA0C9570A98
 
 # Change 'executable' to match the command name given in the project spec.
-EXECUTABLE  = executable
+EXECUTABLE  = bank
 
 # The following line looks for a project's main() in files named project*.cpp,
 # executable.cpp (substituted from EXECUTABLE above), or main.cpp

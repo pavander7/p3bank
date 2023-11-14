@@ -10,6 +10,7 @@ struct Transaction {
     string recipient;
     uint64_t timestamp;
     size_t ID;
+    string so;
 
     bool operator< (const Transaction &other) const;
 };

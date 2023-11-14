@@ -9,6 +9,16 @@ using namespace std;
 Account::Account(string id_in, uint32_t start_bal, uint32_t pin_in, uint64_t timeReg) : 
                 user_id(id_in) , balance(start_bal) , PIN(pin_in) , REG_TIMESTAMP(timeReg) {}
 
+Account::Account(const Account &other) : user_id(other.user_id) , balance(other.balance) , 
+                PIN(other.PIN) , REG_TIMESTAMP(other.REG_TIMESTAMP) {}
+
+Account::Account() {
+    user_id = "";
+    balance = 0;
+    PIN = 0;
+    REG_TIMESTAMP = 0;
+}
+
 string Account::login(string id, uint32_t p, string ip) {
     if (id == this->user_id && p == this->PIN) {
         IP_list.push_back(ip);
@@ -30,14 +40,14 @@ string Account::logout(string ip) {
 }
 
 void Account::send(uint64_t timestamp, Account* recipient, uint32_t amount, size_t ID) {
-    Transaction temp = {user_id, amount, recipient->user_id, timestamp, ID};
+    Transaction temp = {user_id, amount, recipient->user_id, timestamp, ID, ""};
     balance -= amount;
     record_o.push_back(temp);
     recipient->receive(timestamp, this, amount, ID);
 }
 
 void Account::receive(uint64_t timestamp, Account* sender, uint32_t amount, size_t ID) {
-    Transaction temp = {sender->user_id, amount, user_id, timestamp, ID};
+    Transaction temp = {sender->user_id, amount, user_id, timestamp, ID, ""};
     balance += amount;
     record_i.push_back(temp);
 }
@@ -50,6 +60,12 @@ bool Account::isOnline() {
     return !IP_list.empty();
 }
 
+bool Account::isOnline(string ip) {
+    for (list<string>::iterator q = IP_list.begin(); q != IP_list.end(); q++) {
+        if (*q == ip) return true;
+    } return false;
+}
+
 Account* findAccount (vector<Account> &data, string id) {
     for (size_t q = 0; q < data.size(); q++) {
         if (data[q].name() == id) return &data[q];
@@ -57,14 +73,16 @@ Account* findAccount (vector<Account> &data, string id) {
 }
 
 bool Transaction::operator< (const Transaction &other) const {
-    return (this->timestamp < other.timestamp);
+    if (this->timestamp != other.timestamp) {
+        return (this->timestamp < other.timestamp);
+    } else return (this->ID < other.ID);
 }
 
 ostream& operator<< (ostream& os, const Transaction &t) {
-    os << t.sender + " sent " + to_string(t.amount);
-    if (t.amount == 1) os << string("dollar to ");
-    else os << string("dollars to ");
-    os << t.recipient + " at " + to_string(t.timestamp) + ".\n";
+    os << t.ID << ": " << t.sender + " sent " + to_string(t.amount);
+    if (t.amount == 1) os << string(" dollar to ");
+    else os << string(" dollars to ");
+    os << t.recipient + " at " + to_string(t.timestamp) + ".";
     return os;
 }
 
@@ -73,24 +91,27 @@ bool Account::operator< (const Account &other) const {
 }
 
 void Account::fine(uint32_t amount, uint64_t ts) {
-    uint32_t fee = amount/uint32_t(100);
-    fee = min(fee, uint32_t(450));
-    fee = max(fee, uint32_t(10));
-    if ((ts - this->REG_TIMESTAMP) > uint64_t(50000000000)) {
-        fee = (fee * 3) / 4;
-    } 
+    uint32_t fee = this->fee(amount, ts);
     this->balance -= fee;
 }
 
 void Account::fine(uint32_t amount, uint64_t ts, Account* recip) {
+    uint32_t fee = this->fee(amount, ts);
+    this->balance -= (fee/uint32_t(2) + amount%uint32_t(2));
+    recip->balance -= (fee/uint32_t(2));
+}
+
+uint32_t Account::fee(uint32_t amount, uint64_t ts) {
     uint32_t fee = amount/uint32_t(100);
     fee = min(fee, uint32_t(450));
     fee = max(fee, uint32_t(10));
     if (loyalty(ts)) {
         fee = (fee * 3) / 4;
-    } 
-    this->balance -= (fee/uint32_t(2) + amount%uint32_t(2));
-    recip->balance -= (fee/uint32_t(2));
+    } return fee;
+}
+
+bool Account::canAfford(uint32_t amount) {
+    return (this->balance >= amount);
 }
 
 bool Account::loyalty(uint64_t ts) {
@@ -98,8 +119,14 @@ bool Account::loyalty(uint64_t ts) {
 }
 
 uint8_t placeV(uint64_t num, uint8_t p) {
-    uint8_t val = 0;
-    val = (num/uint64_t(10^(10-2*int(p))))%100;
+    string number = to_string(num);
+    cout << p << endl;
+    while (number.size() < 12) {
+        number = "0" + number;
+    }
+    cout << number.size() << " length (12 expected)" << endl;
+    uint8_t val = uint8_t(number[uint8_t(2)*p]*uint8_t(10) + number[uint8_t(2)*p + uint8_t(1)]);
+    cout << num << " place " << p << " = " << val << endl;
     return val;
 }
 
@@ -113,73 +140,86 @@ void Account::report() {
     } cout << endl << "Outgoing " << to_string(record_o.size()) << ":";
     for(size_t g = 0; g < record_o.size(); g++) {
         cout << endl << record_o[g];
-    }
+    } cout << endl;
 }
 
 void tsOut (uint64_t ts) {
-    uint8_t g = 0;
-    while (placeV(ts, g) == 0 && g <= 5) {
-        g++;
-    }
-    switch (g) {
-        case 0 :
-            cout << to_string(placeV(ts, 0)) << " year";
-            if (placeV(ts, 0) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 1)) << " month";
-            if (placeV(ts, 1) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 2)) << " day";
-            if (placeV(ts, 2) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 3)) << " hour";
-            if (placeV(ts, 3) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 4)) << " minute";
-            if (placeV(ts, 4) == 1) cout << " ";
-            else cout << "s ";
-            break;
-        case 1 :
-            cout << to_string(placeV(ts, 1)) << " month";
-            if (placeV(ts, 1) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 2)) << " day";
-            if (placeV(ts, 2) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 3)) << " hour";
-            if (placeV(ts, 3) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 4)) << " minute";
-            if (placeV(ts, 4) == 1) cout << " ";
-            else cout << "s ";
-            break;
-        case 2 :
-            cout << to_string(placeV(ts, 2)) << " day";
-            if (placeV(ts, 2) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 3)) << " hour";
-            if (placeV(ts, 3) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 4)) << " minute";
-            if (placeV(ts, 4) == 1) cout << " ";
-            else cout << "s ";
-            break;
-        case 3 :
-            cout << to_string(placeV(ts, 3)) << " hour";
-            if (placeV(ts, 3) == 1) cout << " ";
-            else cout << "s ";
-            cout << to_string(placeV(ts, 4)) << " minute";
-            if (placeV(ts, 4) == 1) cout << " ";
-            else cout << "s ";
-            break;
-        case 4 :
-            cout << to_string(placeV(ts, 4)) << " minute";
-            if (placeV(ts, 4) == 1) cout << " ";
-            else cout << "s ";
-            break;
-        default :
-            break;
-    } cout << to_string(placeV(ts, 5)) << " second";
-    if (placeV(ts, 5) == 1) cout << ".\n";
-    else cout << "s.\n";
+    string number = to_string(ts);
+    if (number.size()%2 == 1) {
+        number = "0" + number;
+    } 
+    if (number.size() == 12) {
+        cout << (number[0] - 48)*10 + (number[1] - 48) << " year";
+        if ((number[0] - 48)*10 + (number[1] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[2] - 48)*10 + (number[3] - 48) << " month";
+        if ((number[2] - 48)*10 + (number[3] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[4] - 48)*10 + (number[5] - 48) << " day";
+        if ((number[4] - 48)*10 + (number[5] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[6] - 48)*10 + (number[7] - 48) << " hour";
+        if ((number[6] - 48)*10 + (number[7] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[8] - 48)*10 + (number[9] - 48) << " minute";
+        if ((number[8] - 48)*10 + (number[9] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[10] - 48)*10 + (number[11] - 48) << " second";
+        if ((number[10] - 48)*10 + (number[11] - 48) == 1) cout << ".";
+        else cout << "s.";
+    } else if (number.size() == 10) {
+        cout << (number[0] - 48)*10 + (number[1] - 48) << " month";
+        if ((number[0] - 48)*10 + (number[1] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[2] - 48)*10 + (number[3] - 48) << " day";
+        if ((number[2] - 48)*10 + (number[3] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[4] - 48)*10 + (number[5] - 48) << " hour";
+        if ((number[4] - 48)*10 + (number[5] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[6] - 48)*10 + (number[7] - 48) << " minute";
+        if ((number[6] - 48)*10 + (number[7] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[8] - 48)*10 + (number[9] - 48) << " second";
+        if ((number[8] - 48)*10 + (number[9] - 48) == 1) cout << ".";
+        else cout << "s.";
+    } else if (number.size() == 8) {
+        cout << (number[0] - 48)*10 + (number[1] - 48) << " day";
+        if ((number[0] - 48)*10 + (number[1] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[2] - 48)*10 + (number[3] - 48) << " hour";
+        if ((number[2] - 48)*10 + (number[3] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[4] - 48)*10 + (number[5] - 48) << " minute";
+        if ((number[4] - 48)*10 + (number[5] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[6] - 48)*10 + (number[7] - 48) << " second";
+        if ((number[6] - 48)*10 + (number[7] - 48) == 1) cout << ".";
+        else cout << "s.";
+    } else if (number.size() == 6) {
+        cout << (number[0] - 48)*10 + (number[1] - 48) << " hour";
+        if ((number[0] - 48)*10 + (number[1] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[2] - 48)*10 + (number[3] - 48) << " minute";
+        if ((number[2] - 48)*10 + (number[3] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[4] - 48)*10 + (number[5] - 48) << " second";
+        if ((number[4] - 48)*10 + (number[5] - 48) == 1) cout << " ";
+        else cout << "s ";
+    } else if (number.size() == 4) {
+        cout << (number[0] - 48)*10 + (number[1] - 48) << " minute";
+        if ((number[0] - 48)*10 + (number[1] - 48) == 1) cout << " ";
+        else cout << "s ";
+        cout << (number[2] - 48)*10 + (number[3] - 48) << " second";
+        if ((number[2] - 48)*10 + (number[3] - 48) == 1) cout << ".";
+        else cout << "s.";
+    } else {
+        cout << (number[0] - 48)*10 + (number[1] - 48) << " second";
+        if ((number[0] - 48)*10 + (number[1] - 48) == 1) cout << ".";
+        else cout << "s.";
+    } 
+}
+
+bool Account::exists(uint64_t ts) {
+    return (ts >= REG_TIMESTAMP);
 }
