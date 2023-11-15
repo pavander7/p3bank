@@ -5,34 +5,25 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <list>
 #include <unordered_map>
 #include <queue>
 #include "account.h"
 
 using namespace std;
 
-bool place (unordered_map<string,Account> &reg, string s, string r, uint32_t amount, uint64_t ts, size_t ID) {
-    if (reg.count(s) != size_t(0) && reg.count(r) != size_t(0)) {
-        if (reg[s].isOnline()) {
-            reg[s].send(ts, &reg[r], amount, ID);
-            return true;
-        } else return false;
-    } else return false;
-}
-
 void listOut(vector<Transaction> &record, uint64_t begin, uint64_t end) {
     uint64_t current = record.front().timestamp;
     size_t i = 0;
     while (current < begin && i < record.size()) {
-        current = record[i].timestamp;
         i++;
+        current = record[i].timestamp;
     } size_t count = 0;
     while (current < end && i < record.size()) {
         cout << record[i] << endl;
         i++;
         count++;
-    } 
+        current = record[i].timestamp;
+    }
     if (count == 1) {
         cout << "There was " + to_string(count) + " transaction that was placed between time "
              + to_string(begin) + " to " + to_string(end) + ".\n"; 
@@ -46,12 +37,11 @@ void revenue(vector<Transaction> &record, uint64_t begin, uint64_t end, unordere
     uint64_t current = record.front().timestamp;
     size_t i = 0;
     while (current < begin && i < record.size()) {
-        current = record[i].timestamp;
         i++;
+        current = record[i].timestamp;
     }
     uint32_t revenue = 0;
     while (current < end && i < record.size()) {
-        //Account* sender = findAccount(reg, record[i].sender);
         uint32_t fee = record[i].amount/uint32_t(100);
         fee = min(fee, uint32_t(450));
         fee = max(fee, uint32_t(10));
@@ -59,6 +49,7 @@ void revenue(vector<Transaction> &record, uint64_t begin, uint64_t end, unordere
             fee = (fee * 3) / 4;
         } revenue += fee;
         i++;
+        current = record[i].timestamp;
     } 
     uint64_t interval = end - begin;
     if (revenue == 1) {
@@ -84,7 +75,6 @@ void summarize(vector<Transaction> &record, unordered_map<string,Account> &reg, 
     uint32_t revenue = 0;
     while (current < end && i < record.size()) {
         cout << record[i] << endl;
-        //Account* sender = findAccount(reg, record[i].sender);
         uint32_t fee = record[i].amount/uint32_t(100);
         fee = min(fee, uint32_t(450));
         fee = max(fee, uint32_t(10));
@@ -113,14 +103,12 @@ uint64_t clean(string ts) {
             result.push_back(ts[c]);
         }
     } 
-    //cout << result << endl;
     return uint64_t(strtoull(result.c_str(), nullptr, 10));
 }
 
 int main (int argc, char* argv[]) {
     //getoptlong time
-    //ios_base::sync_with_stdio(false);
-    //cout << "good morning \n";
+    ios_base::sync_with_stdio(false);
 
     static struct option long_options[] = {
     {"help",        no_argument,        NULL,  'h'},
@@ -157,14 +145,16 @@ int main (int argc, char* argv[]) {
         return 1;
     }
 
-    //cout << "command line processed\n";
-
     ifstream reg(filename);
     string line;
     unordered_map<string, Account> registrations;
 
+    if (!reg.is_open()) {
+        cerr << "Registration file failed to open.\n";
+        exit(1);
+    }
+
     while (getline(reg, line)) {
-        //cout << "processing: " << line << endl;
         stringstream s(line);
         string ts, id, p, bal;
         getline(s, ts, '|');
@@ -173,43 +163,52 @@ int main (int argc, char* argv[]) {
         getline(s, bal, '|');
         uint64_t time = clean(ts);
         registrations[id] = Account(id, uint32_t(stoi(bal)), uint32_t(stoi(p)), time);
-        //cout << "registered: " << id << endl;
     }
 
     vector<Transaction> record;
     priority_queue<Transaction> buffer;
 
     size_t TransNum = 0;
+    uint64_t currentTime = 0;
     while(getline(cin, line)) {
         if (line[0] != '#') {
             stringstream s(line);
             string start;
             s >> start;
             if (start == "login") {
-                string id, p, ip;
+                string id, p, ip, temp;
                 s >> id >> p >> ip;
-                cout << registrations[id].login(id, uint32_t(stoi(p)), ip);
+                temp = registrations[id].login(id, uint32_t(stoi(p)), ip);
+                if (verbose) cout << temp;
             } else if (start == "out") {
-                string id, ip;
+                string id, ip, temp;
                 s >> id >> ip;
-                cout << registrations[id].logout(ip);
+                temp = registrations[id].logout(ip);
+                if (verbose) cout << temp;
             } else if (start == "place") {
                 string ts, ip, send, recip, amount, exec, share;
                 s >> ts >> ip >> send >> recip >> amount >> exec >> share;
                 uint64_t timestamp = clean(ts);
                 uint64_t execTime = clean(exec);
+                if (execTime < timestamp) {
+                    cerr << "Invalid decreasing timestamp in 'place' command.\n";
+                    exit(1);
+                } if (timestamp < currentTime || execTime < currentTime) {
+                    cerr << "You cannot have an execution date before the current timestamp.\n";
+                    exit(1);
+                } currentTime = timestamp;
                 if ((execTime - timestamp) > uint64_t(3000000)) {
-                    cout << "Select a time less than three days in the future.\n";
+                    if (verbose) cout << "Select a time less than three days in the future.\n";
                 } else if (registrations.count(send) == 0) {
-                    cout << "Sender " << send << " does not exist.\n";
+                    if (verbose) cout << "Sender " << send << " does not exist.\n";
                 } else if (registrations.count(recip) == 0) {
-                    cout << "Recipient " << recip << " does not exist.\n";
+                    if (verbose) cout << "Recipient " << recip << " does not exist.\n";
                 } else if (!registrations[send].exists(execTime) || !registrations[recip].exists(execTime)) {
-                    cout << "At the time of execution, sender and/or recipient have not registered.\n";
+                    if (verbose) cout << "At the time of execution, sender and/or recipient have not registered.\n";
                 } else if (!registrations[send].isOnline()) {
-                    cout << "Sender " << send << " is not logged in.\n";
+                    if (verbose) cout << "Sender " << send << " is not logged in.\n";
                 } else if (!registrations[send].isOnline(ip)) {
-                    cout << "Fraudulent transaction detected, aborting request.\n";
+                    if (verbose) cout << "Fraudulent transaction detected, aborting request.\n";
                 } else {
                     Transaction temp = {send, uint32_t(stoi(amount)), recip, execTime, TransNum, share};
                     if (!buffer.empty()) {
@@ -220,27 +219,28 @@ int main (int argc, char* argv[]) {
                                 sum_send = buffer.top().amount + registrations[buffer.top().sender].fee(buffer.top().amount, buffer.top().timestamp);
                             } else {
                                 uint32_t f = registrations[buffer.top().sender].fee(buffer.top().amount, buffer.top().timestamp);
-                                sum_send = sum_send = buffer.top().amount + f/uint32_t(2);
+                                sum_send = sum_send + buffer.top().amount + f/uint32_t(2);
                                 sum_recip = f/uint32_t(2);
-                            } if (registrations[buffer.top().sender].canAfford(sum_send) && registrations[buffer.top().sender].canAfford(sum_recip)) { //check for funds
-                                registrations[buffer.top().sender].send(buffer.top().timestamp, &registrations[buffer.top().recipient], buffer.top().amount, buffer.top().ID);
+                            } if (registrations[buffer.top().sender].canAfford(sum_send) && registrations[buffer.top().recipient].canAfford(sum_recip)) { //check for funds
+                                Transaction trans = buffer.top();
+                                registrations[buffer.top().sender].send(trans, &registrations[buffer.top().recipient]);
+                                if (buffer.top().so == "o") {
+                                    registrations[buffer.top().sender].fine(buffer.top().amount, buffer.top().timestamp);
+                                } else registrations[buffer.top().sender].fine(buffer.top().amount, buffer.top().timestamp, &registrations[buffer.top().recipient]);
+                                record.push_back(buffer.top());
+                                if (verbose) cout << "Transaction executed at " << buffer.top().timestamp << ": $" << buffer.top().amount << " from "
+                                    << buffer.top().sender << " to " << buffer.top().recipient <<  ".\n";
                             } else {
-                                cout << "Insufficient funds to process transaction " << buffer.top().ID << ".\n";
-                            } if (buffer.top().so == "o") {
-                                registrations[buffer.top().sender].fine(buffer.top().amount, buffer.top().timestamp);
-                            } else registrations[buffer.top().sender].fine(buffer.top().amount, buffer.top().timestamp, &registrations[buffer.top().recipient]);
-                            record.push_back(buffer.top());
-                            cout << "Transaction executed at " << buffer.top().timestamp << ": $" << buffer.top().amount << " from "
-                                << buffer.top().sender << " to " << buffer.top().recipient <<  ".\n";
+                                if (verbose) cout << "Insufficient funds to process transaction " << buffer.top().ID << ".\n";
+                            } 
                             buffer.pop();
                             if (buffer.empty()) {
-                                //cout << "buffer empty\n";
                                 break;
                             }
                         }
                     }
                     buffer.push(temp);
-                    cout << "Transaction placed at " << timestamp << ": $" << amount << " from " 
+                    if (verbose) cout << "Transaction placed at " << timestamp << ": $" << amount << " from " 
                              << send << " to " << recip << " at " << execTime << ".\n";
                     TransNum++;
                 }
@@ -252,21 +252,26 @@ int main (int argc, char* argv[]) {
                         sum_send = buffer.top().amount + registrations[buffer.top().sender].fee(buffer.top().amount, buffer.top().timestamp);
                     } else {
                         uint32_t f = registrations[buffer.top().sender].fee(buffer.top().amount, buffer.top().timestamp);
-                        sum_send = sum_send = buffer.top().amount + f/uint32_t(2);
+                        sum_send = sum_send + buffer.top().amount + f/uint32_t(2);
                         sum_recip = f/uint32_t(2);
                     } if (registrations[buffer.top().sender].canAfford(sum_send) && registrations[buffer.top().sender].canAfford(sum_recip)) { //check for funds
-                        registrations[buffer.top().sender].send(buffer.top().timestamp, &registrations[buffer.top().recipient], buffer.top().amount, buffer.top().ID);
-                    } else {
-                        cout << "Insufficient funds to process transaction " << buffer.top().ID << ".\n";
-                    } if (buffer.top().so == "o") {
+                        Transaction trans = buffer.top();
+                        registrations[buffer.top().sender].send(trans, &registrations[buffer.top().recipient]);
+                        if (buffer.top().so == "o") {
                         registrations[buffer.top().sender].fine(buffer.top().amount, buffer.top().timestamp);
-                    } else registrations[buffer.top().sender].fine(buffer.top().amount, buffer.top().timestamp, &registrations[buffer.top().recipient]);
-                    record.push_back(buffer.top());
-                    cout << "Transaction executed at " << buffer.top().timestamp << ": $" << buffer.top().amount << " from "
-                        << buffer.top().sender << " to " << buffer.top().recipient <<  ".\n";
+                        } else registrations[buffer.top().sender].fine(buffer.top().amount, buffer.top().timestamp, &registrations[buffer.top().recipient]);
+                        record.push_back(buffer.top());
+                        if (verbose) cout << "Transaction executed at " << buffer.top().timestamp << ": $" << buffer.top().amount << " from "
+                            << buffer.top().sender << " to " << buffer.top().recipient <<  ".\n";
+                    } else {
+                        if (verbose) cout << "Insufficient funds to process transaction " << buffer.top().ID << ".\n";
+                    } 
                     buffer.pop();
                 }
                 break;
+            } else {
+                cerr << "Error: Reading from cin has failed\n";
+                exit(1);
             }
         }
     }
@@ -300,13 +305,20 @@ int main (int argc, char* argv[]) {
         } else if (start == "h") {
             string id;
             s >> id;
-            registrations[id].report();
+            if (registrations.count(id) == 0) {
+                cout << "User " << id << " does not exist.\n";
+            } else {
+                registrations[id].report();
+            }
         } else if (start == "s") {
             string ts;
             uint64_t time;
             s >> ts;
             time = clean(ts);
             summarize(record, registrations, time);
+        } else {
+            cerr << "Error: Reading from cin has failed\n";
+            exit(1);
         }
     }
 }

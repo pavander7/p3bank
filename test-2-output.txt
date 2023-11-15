@@ -1,0 +1,82 @@
+User reilly logged in.
+At the time of execution, sender and/or recipient have not registered.
+Transaction placed at 10001000000: $100 from reilly to kyle at 10002000000.
+At the time of execution, sender and/or recipient have not registered.
+Sender stover does not exist.
+Recipient stover does not exist.
+Sender paul is not logged in.
+Transaction executed at 10002000000: $100 from reilly to kyle.
+Transaction placed at 10006000000: $50000 from reilly to al at 10007000000.
+Failed to log out reilly.
+User reilly logged out.
+User al logged in.
+Transaction executed at 10007000000: $50000 from reilly to al.
+Transaction placed at 60000000000: $1000 from al to prat at 60000000005.
+Transaction placed at 60000000000: $1000 from al to prat at 60000000005.
+Transaction executed at 60000000005: $1000 from al to prat.
+Transaction executed at 60000000005: $1000 from al to prat.
+Transaction placed at 70001000000: $1000 from al to prat at 70002000000.
+Transaction executed at 70002000000: $1000 from al to prat.
+Transaction placed at 70004000000: $1 from al to lee at 70004000000.
+User al logged out.
+Transaction executed at 70004000000: $1 from al to lee.
+0: reilly sent 100 dollars to kyle at 10002000000.
+1: reilly sent 50000 dollars to al at 10007000000.
+2: al sent 1000 dollars to prat at 60000000005.
+3: al sent 1000 dollars to prat at 60000000005.
+4: al sent 1000 dollars to prat at 70002000000.
+5: al sent 1 dollar to lee at 70004000000.
+There were 6 transactions that were placed between time 0 to 80000000000.
+281Bank has collected 488 dollars in fees over 8 years 
+Customer reilly account summary:
+Balance: $1949440
+Total # of transactions: 2
+Incoming 0:
+Outgoing 2:
+0x7ff7b2b8d948
+0x7ff7b2b8d948
+Customer kyle account summary:
+Balance: $20100
+Total # of transactions: 1
+Incoming 1:
+0x7ff7b2b8d948
+Outgoing 0:
+Customer derek account summary:
+Balance: $20000
+Total # of transactions: 0
+Incoming 0:
+Outgoing 0:
+Customer paul account summary:
+Balance: $20000
+Total # of transactions: 0
+Incoming 0:
+Outgoing 0:
+Customer al account summary:
+Balance: $66983
+Total # of transactions: 5
+Incoming 1:
+0x7ff7b2b8d948
+Outgoing 4:
+0x7ff7b2b8d948
+0x7ff7b2b8d948
+0x7ff7b2b8d948
+0x7ff7b2b8d8d8
+Customer prat account summary:
+Balance: $22994
+Total # of transactions: 3
+Incoming 3:
+0x7ff7b2b8d948
+0x7ff7b2b8d948
+0x7ff7b2b8d948
+Outgoing 0:
+Customer lee account summary:
+Balance: $19998
+Total # of transactions: 1
+Incoming 1:
+0x7ff7b2b8d8d8
+Outgoing 0:
+Customer johnny account summary:
+Balance: $20000
+Total # of transactions: 0
+Incoming 0:
+Outgoing 0:
